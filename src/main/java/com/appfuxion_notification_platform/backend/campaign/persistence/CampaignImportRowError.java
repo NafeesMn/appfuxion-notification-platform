@@ -16,7 +16,7 @@ import lombok.Setter;
 @Table(name = "campaign_import_row_errors")
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class CampaignImportRowError extends TenantScopedEntity {
 
     @Column(name = "campaign_id", nullable = false)

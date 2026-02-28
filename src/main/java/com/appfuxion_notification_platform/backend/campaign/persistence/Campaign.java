@@ -22,7 +22,7 @@ import lombok.Setter;
 @Table(name = "campaigns")
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class Campaign extends TenantScopedEntity {
 
     @Column(name = "correlation_id", nullable = false)

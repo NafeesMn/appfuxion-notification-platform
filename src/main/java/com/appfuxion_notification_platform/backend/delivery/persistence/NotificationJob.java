@@ -21,7 +21,7 @@ import lombok.Setter;
 @Table(name = "notification_jobs")
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class NotificationJob extends TenantScopedEntity {
 
     @Column(name = "campaign_id", nullable = false)

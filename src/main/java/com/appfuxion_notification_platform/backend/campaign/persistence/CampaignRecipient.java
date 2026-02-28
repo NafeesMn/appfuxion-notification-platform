@@ -19,7 +19,7 @@ import lombok.Setter;
 @Table(name = "campaign_recipients")
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class CampaignRecipient extends TenantScopedEntity {
 
     @Column(name = "campaign_id", nullable = false)

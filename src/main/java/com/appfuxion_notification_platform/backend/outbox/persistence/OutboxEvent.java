@@ -20,7 +20,7 @@ import lombok.Setter;
 @Table(name = "outbox_events")
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class OutboxEvent extends TenantScopedEntity {
 
     @Column(name = "aggregate_type", nullable = false, length = 64)
