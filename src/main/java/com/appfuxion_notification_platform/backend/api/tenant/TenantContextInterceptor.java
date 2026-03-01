@@ -1,5 +1,6 @@
 package com.appfuxion_notification_platform.backend.api.tenant;
 
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -25,7 +26,9 @@ public class TenantContextInterceptor implements HandlerInterceptor {
             throw new MissingTenantContextException(tenantHeaderName);
         }
 
-        TenantContextHolder.set(new TenantContext(tenantKey.trim()));
+        String normalizedTenantKey = tenantKey.trim();
+        TenantContextHolder.set(new TenantContext(normalizedTenantKey));
+        MDC.put("tenantKey", normalizedTenantKey);
         return true;
     }
 
@@ -35,6 +38,7 @@ public class TenantContextInterceptor implements HandlerInterceptor {
             HttpServletResponse response,
             Object handler,
             Exception ex) {
+        MDC.remove("tenantKey");
         TenantContextHolder.clear();
     }
 }

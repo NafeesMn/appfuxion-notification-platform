@@ -7,6 +7,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.appfuxion_notification_platform.backend.campaign.application.csv.CampaignCsvParser;
@@ -23,6 +25,7 @@ import com.appfuxion_notification_platform.backend.delivery.application.Idempote
 import com.appfuxion_notification_platform.backend.delivery.domain.NotificationJobStatus;
 import com.appfuxion_notification_platform.backend.delivery.persistence.NotificationJob;
 import com.appfuxion_notification_platform.backend.delivery.persistence.NotificationJobRepository;
+import com.appfuxion_notification_platform.backend.observability.logging.PiiMasker;
 import com.appfuxion_notification_platform.backend.outbox.domain.OutboxEventStatus;
 import com.appfuxion_notification_platform.backend.outbox.persistence.OutboxEvent;
 import com.appfuxion_notification_platform.backend.outbox.persistence.OutboxEventRepository;
@@ -34,6 +37,8 @@ import com.appfuxion_notification_platform.backend.tenant.persistence.TenantRepo
  */
 @Service
 public class DefaultCampaignCreateService implements CampaignCreateService {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultCampaignCreateService.class);
 
     private final TenantRepository tenantRepository;
     private final CampaignRepository campaignRepository;
@@ -84,6 +89,13 @@ public class DefaultCampaignCreateService implements CampaignCreateService {
         Tenant tenant = tenantRepository.findByTenantKey(tenantKey)
                         .orElseThrow(() -> new IllegalArgumentException("Unknown tenant key: " + tenantKey)); 
 
+        log.info(
+                "campaign.create.accepted tenantKey={} correlationId={} channel={} campaignType={}",
+                tenantKey,
+                command.correlationId(),
+                command.channel(),
+                command.campaignType());
+
         String defaultTimezone = tenant.getDefaultTimezone();
         Instant acceptedAt = Instant.now(clock);
 
@@ -117,6 +129,14 @@ public class DefaultCampaignCreateService implements CampaignCreateService {
         if (dispatchEnqueued) {
             outboxEventRepository.save(buildDispatchRequestedOutbox(savedCampaign, acceptedRows[0], invalidRows[0], acceptedAt));
         }
+
+        log.info(
+                "campaign.create.completed tenantId={} campaignId={} acceptedRows={} invalidRows={} dispatchEnqueued={}",
+                tenant.getId(),
+                savedCampaign.getId(),
+                acceptedRows[0],
+                invalidRows[0],
+                dispatchEnqueued);
 
         return new CreateCampaignResult(
                 savedCampaign.getId(),
@@ -291,36 +311,13 @@ public class DefaultCampaignCreateService implements CampaignCreateService {
     }
 
     private String maskedRowSnapshot(CampaignCsvRow row) {
-        String email = row.email() == null ? "" : maskEmail(row.email());
-        String phone = row.phoneNumber() == null ? "" : maskPhone(row.phoneNumber());
-        String device = row.deviceToken() == null ? "" : maskToken(row.deviceToken());
+        String email = row.email() == null ? "" : PiiMasker.maskEmail(row.email());
+        String phone = row.phoneNumber() == null ? "" : PiiMasker.maskPhone(row.phoneNumber());
+        String device = row.deviceToken() == null ? "" : PiiMasker.maskToken(row.deviceToken());
         String timezone = row.timezone() == null ? "" : row.timezone();
         return """
                 {"rowNumber":%d,"email":"%s","phoneNumber":"%s","deviceToken":"%s","timezone":"%s"}
                 """.formatted(row.rowNumber(), email, phone, device, timezone).replace("\n", "");
-    }
-
-    private String maskEmail(String email) {
-        int atIndex = email.indexOf('@');
-        if (atIndex <= 1) {
-            return "***";
-        }
-        return email.charAt(0) + "***" + email.substring(atIndex);
-    }
-
-    private String maskPhone(String phone) {
-        String digits = phone.replaceAll("\\D", "");
-        if (digits.length() <= 4) {
-            return "***";
-        }
-        return "***" + digits.substring(digits.length() - 4);
-    }
-
-    private String maskToken(String token) {
-        if (token.length() <= 8) {
-            return "***";
-        }
-        return token.substring(0, 4) + "***" + token.substring(token.length() - 4);
     }
 
     private String requireNonBlank(String value, String fieldName) {

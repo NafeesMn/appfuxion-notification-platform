@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
 
+import org.slf4j.MDC;
+
 import com.appfuxion_notification_platform.backend.delivery.domain.NotificationAttemptOutcome;
 import com.appfuxion_notification_platform.backend.delivery.domain.NotificationJobStatus;
 import com.appfuxion_notification_platform.backend.delivery.persistence.NotificationAttempt;
@@ -109,48 +111,65 @@ public class DefaultNotificationJobExecutor implements NotificationJobExecutor {
         Objects.requireNonNull(worker, "worker");
         Objects.requireNonNull(now, "now");
 
-        if (TERMINAL.contains(job.getStatus())) {
-            return;
+        String previousCorrelationId = MDC.get("correlationId");
+        String previousTenantId = MDC.get("tenantId");
+        String previousWorkerId = MDC.get("workerId");
+        if (job.getCorrelationId() != null) {
+            MDC.put("correlationId", job.getCorrelationId().toString());
         }
+        if (job.getTenantId() != null) {
+            MDC.put("tenantId", job.getTenantId().toString());
+        }
+        MDC.put("workerId", worker.workerId());
 
-        recordLagIfAny(job, now);
+        try {
+            if (TERMINAL.contains(job.getStatus())) {
+                return;
+            }
 
-        if (ruleEvaluationEnabled) {
-            NotificationRuleContext context = ruleContextLoader.loadFor(job);
-            NotificationRuleDecision ruleDecision = ruleEngine.evaluate(context, now);
-            if (applyRuleDecision(job, ruleDecision, now)) {
+            recordLagIfAny(job, now);
+
+            if (ruleEvaluationEnabled) {
+                NotificationRuleContext context = ruleContextLoader.loadFor(job);
+                NotificationRuleDecision ruleDecision = ruleEngine.evaluate(context, now);
+                if (applyRuleDecision(job, ruleDecision, now)) {
+                    notificationJobRepository.save(job);
+                    return;
+                }
+            }
+
+            BackPressureDecision decision = channelRateLimiter.beforeDispatch(job.getChannel(), now);
+
+            if (!decision.allowedNow()) {
+                job.setStatus(NotificationJobStatus.DELAYED);
+                job.setDeferredUntil(decision.nextEligibleAt());
+                job.setNextAttemptAt(decision.nextEligibleAt());
+                job.setLastRuleReasonCode(decision.reason());
+                job.setCompletedAt(null);
+                metricsRecorder.recordThrottleDeferral(job.getChannel());
                 notificationJobRepository.save(job);
                 return;
             }
+
+            if (!deliveryExecutionEnabled) {
+                // Phase 5 boundary:
+                // Rule checks and throttle deferral are applied.
+                // Provider send + attempt persistence + retry transitions are enabled by the Phase 6 constructor.
+                job.setStatus(NotificationJobStatus.PROCESSING);
+                job.setDeferredUntil(null);
+                job.setLastRuleReasonCode(null);
+                job.setCompletedAt(null);
+                job.setLastAttemptAt(now);
+                notificationJobRepository.save(job);
+                return;
+            }
+
+            executeDelivery(job, worker, now);
+        } finally {
+            restoreMdc("correlationId", previousCorrelationId);
+            restoreMdc("tenantId", previousTenantId);
+            restoreMdc("workerId", previousWorkerId);
         }
-
-        BackPressureDecision decision = channelRateLimiter.beforeDispatch(job.getChannel(), now);
-
-        if (!decision.allowedNow()) {
-            job.setStatus(NotificationJobStatus.DELAYED);
-            job.setDeferredUntil(decision.nextEligibleAt());
-            job.setNextAttemptAt(decision.nextEligibleAt());
-            job.setLastRuleReasonCode(decision.reason());
-            job.setCompletedAt(null);
-            metricsRecorder.recordThrottleDeferral(job.getChannel());
-            notificationJobRepository.save(job);
-            return;
-        }
-
-        if (!deliveryExecutionEnabled) {
-            // Phase 5 boundary:
-            // Rule checks and throttle deferral are applied.
-            // Provider send + attempt persistence + retry transitions are enabled by the Phase 6 constructor.
-            job.setStatus(NotificationJobStatus.PROCESSING);
-            job.setDeferredUntil(null);
-            job.setLastRuleReasonCode(null);
-            job.setCompletedAt(null);
-            job.setLastAttemptAt(now);
-            notificationJobRepository.save(job);
-            return;
-        }
-
-        executeDelivery(job, worker, now);
     }
 
     private void executeDelivery(NotificationJob job, WorkerIdentity worker, Instant now) {
@@ -310,6 +329,14 @@ public class DefaultNotificationJobExecutor implements NotificationJobExecutor {
         long lagSeconds = Duration.between(job.getNextAttemptAt(), now).getSeconds();
         if (lagSeconds > 0) {
             metricsRecorder.recordJobLagSeconds(lagSeconds);
+        }
+    }
+
+    private void restoreMdc(String key, String previousValue) {
+        if (previousValue == null) {
+            MDC.remove(key);
+        } else {
+            MDC.put(key, previousValue);
         }
     }
 }
