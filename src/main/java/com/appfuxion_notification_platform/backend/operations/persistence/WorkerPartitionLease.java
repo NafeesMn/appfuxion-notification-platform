@@ -18,7 +18,7 @@ import lombok.Setter;
 @Table(name = "worker_partition_leases")
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class WorkerPartitionLease {
 
     @Id
