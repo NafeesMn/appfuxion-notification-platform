@@ -4,7 +4,10 @@
 
 This repository is being prepared for the Appfuxion take-home assessment: a multi-tenant notification and campaign platform (Email/SMS/Push simulation) with asynchronous processing, retries, idempotency, rate limiting, CSV ingestion, structured logging, and tenant isolation.
 
-This document is the Phase 0 deliverable: scope lock, architecture decisions, assumptions, and an implementation-ready plan. It intentionally avoids endpoint code, worker code, and SQL migrations.
+This document started as the Phase 0 deliverable and was extended through Phase 11 as implementation progressed. The final Part 5 material is documented in:
+
+- `docs/assessment/PART5_SYSTEM_DESIGN.md`
+- `docs/assessment/FINAL_HARDENING_NOTES.md`
 
 ## Phase 0 Scope (Completed in This Document Set)
 

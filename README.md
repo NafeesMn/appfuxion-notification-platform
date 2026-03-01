@@ -46,6 +46,8 @@ Core requirements to implement in later phases:
 - `docs/assessment/PROCESS_FLOW.md`
 - `docs/assessment/ARCHITECTURE_DIAGRAM.md`
 - `docs/assessment/PHASE10_SCALING.md`
+- `docs/assessment/PART5_SYSTEM_DESIGN.md`
+- `docs/assessment/FINAL_HARDENING_NOTES.md`
 
 ## Planned Architecture (High Level)
 
