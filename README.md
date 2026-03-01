@@ -4,8 +4,6 @@
 
 Backend take-home assessment project for a multi-tenant notification and campaign platform supporting simulated Email/SMS/Push delivery with asynchronous processing.
 
-This repository is currently in **Phase 0 (Architecture & Planning)**. The implementation code is intentionally minimal while the architecture, assumptions, and roadmap are being locked.
-
 ## Assessment Scope (Planned)
 
 Core requirements to implement in later phases:
@@ -33,9 +31,10 @@ Core requirements to implement in later phases:
 
 ## Repository Status
 
-- Existing Spring Boot scaffold generated
-- Planning artifacts added under `docs/assessment/`
-- Implementation of APIs, workers, and migrations is intentionally deferred to later phases
+- Spring Boot + PostgreSQL + Flyway baseline implemented
+- Campaign create/query/retry APIs implemented
+- Scaling runtime (partitioned worker coordination) implemented
+- Planning artifacts maintained under `docs/assessment/`
 
 ## Planning Documents
 
@@ -46,6 +45,7 @@ Core requirements to implement in later phases:
 - `docs/assessment/CONCEPTUAL_DOMAIN_MODEL.md`
 - `docs/assessment/PROCESS_FLOW.md`
 - `docs/assessment/ARCHITECTURE_DIAGRAM.md`
+- `docs/assessment/PHASE10_SCALING.md`
 
 ## Planned Architecture (High Level)
 
@@ -89,6 +89,10 @@ Planned examples (final names may change):
 - `APP_TENANT_HEADER_NAME`
 - `APP_WORKER_ENABLED`
 - `APP_PROVIDER_SIMULATOR_SEED`
+- `APP_SCALING_WORKER_ENABLED`
+- `APP_SCALING_WORKER_ID`
+- `APP_SCALING_ACTIVE_WORKERS`
+- `APP_SCALING_TOTAL_PARTITIONS`
 
 ### Run Instructions (Placeholder)
 
@@ -98,17 +102,38 @@ Planned commands (to be finalized after implementation):
 .\mvnw.cmd spring-boot:run
 ```
 
+Enable Phase 10 worker loop (example):
+
+```powershell
+$env:APP_SCALING_WORKER_ENABLED="true"
+$env:APP_SCALING_WORKER_ID="worker-a"
+$env:APP_SCALING_ACTIVE_WORKERS="4"
+.\mvnw.cmd spring-boot:run
+```
+
 ### Database Migrations (Placeholder)
 
 Flyway migrations will be added in Phase 1.
 
-## Testing (Placeholder - To Be Completed Later)
+## Testing
 
 Planned test strategy:
 
 - Unit tests for rules, retries, idempotency normalization
 - Integration tests with PostgreSQL (Testcontainers preferred)
 - Load/benchmark script for Part 4 scaling demonstration
+
+Run all tests:
+
+```powershell
+.\mvnw.cmd test
+```
+
+Run Phase 10 scaling benchmark harness:
+
+```powershell
+.\scripts\phase10\run-scaling-benchmark.ps1
+```
 
 ## Roadmap
 

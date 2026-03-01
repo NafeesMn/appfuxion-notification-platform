@@ -1,12 +1,16 @@
 package com.appfuxion_notification_platform.backend.delivery.scaling.runtime;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.annotation.Transactional;
+
 import com.appfuxion_notification_platform.backend.delivery.scaling.PartitionLeaseService;
 import com.appfuxion_notification_platform.backend.delivery.scaling.domain.LeaseAcquireResult;
 import com.appfuxion_notification_platform.backend.delivery.scaling.domain.PartitionLease;
@@ -18,16 +22,24 @@ import com.appfuxion_notification_platform.backend.operations.persistence.Worker
 public class DatabasePartitionLeaseService implements PartitionLeaseService {
 
     private final WorkerPartitionLeaseRepository workerPartitionLeaseRepository;
+    private final Clock clock;
 
     public DatabasePartitionLeaseService(WorkerPartitionLeaseRepository workerPartitionLeaseRepository) {
+        this(workerPartitionLeaseRepository, Clock.systemUTC());
+    }
+
+    public DatabasePartitionLeaseService(
+            WorkerPartitionLeaseRepository workerPartitionLeaseRepository,
+            Clock clock) {
         this.workerPartitionLeaseRepository = Objects.requireNonNull(workerPartitionLeaseRepository);
+        this.clock = Objects.requireNonNull(clock);
     }
 
     @Override
     public LeaseAcquireResult tryAcquire(int partitionId, WorkerIdentity worker, Duration leaseTtl) {
         validateCommon(partitionId, worker, leaseTtl);
         String workerId = requireWorkerId(worker);
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         Instant leaseExpiredAt = now.plus(leaseTtl);
 
         try {
@@ -57,6 +69,9 @@ public class DatabasePartitionLeaseService implements PartitionLeaseService {
             return new LeaseAcquireResult(false, toDomain(lease));
         } catch (ObjectOptimisticLockingFailureException e) {
             return new LeaseAcquireResult(false, null);
+        } catch (DataIntegrityViolationException e) {
+            WorkerPartitionLease lease = workerPartitionLeaseRepository.findById(partitionId).orElse(null);
+            return new LeaseAcquireResult(false, lease == null ? null : toDomain(lease));
         }
     }
 
@@ -64,7 +79,7 @@ public class DatabasePartitionLeaseService implements PartitionLeaseService {
     public boolean heartbeat(int partitionId, WorkerIdentity worker, Duration leaseTtl) {
         validateCommon(partitionId, worker, leaseTtl);
         String workerId = requireWorkerId(worker);
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         Instant leaseExpiresAt = now.plus(leaseTtl);
 
         try {
@@ -104,11 +119,9 @@ public class DatabasePartitionLeaseService implements PartitionLeaseService {
     public Set<Integer> listOwnedPartitions(WorkerIdentity worker) {
         Objects.requireNonNull(worker, "worker");
         String workerId = requireWorkerId(worker);
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
-        return workerPartitionLeaseRepository.findAll().stream()
-                .filter(lease -> workerId.equals(lease.getWorkerId()))
-                .filter(lease -> !isExpired(lease, now))
+        return workerPartitionLeaseRepository.findByWorkerIdAndLeaseExpiresAtAfter(workerId, now).stream()
                 .map(WorkerPartitionLease::getPartitionId)
                 .collect(Collectors.toUnmodifiableSet());
     }
@@ -116,10 +129,7 @@ public class DatabasePartitionLeaseService implements PartitionLeaseService {
     @Override
     public int reclaimExpiredLeases(Instant now) {
         Objects.requireNonNull(now, "now");
-        var expired = workerPartitionLeaseRepository.findByLeaseExpiresAtBefore(now);
-        if(expired.isEmpty()) return 0;
-        workerPartitionLeaseRepository.deleteAll(expired);
-        return expired.size();
+        return Math.toIntExact(workerPartitionLeaseRepository.deleteByLeaseExpiresAtBefore(now));
     }
 
     private static void validateCommon(int partitionId, WorkerIdentity worker, Duration leaseTtl){
