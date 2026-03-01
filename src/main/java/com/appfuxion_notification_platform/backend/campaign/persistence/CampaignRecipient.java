@@ -2,6 +2,9 @@ package com.appfuxion_notification_platform.backend.campaign.persistence;
 
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import com.appfuxion_notification_platform.backend.domain.shared.NotificationChannel;
 import com.appfuxion_notification_platform.backend.persistence.common.TenantScopedEntity;
 
@@ -48,6 +51,7 @@ public class CampaignRecipient extends TenantScopedEntity {
     private String timezone;
 
     @Column(name = "personalization_payload", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String personalizationPayload;
 
     @Column(name = "normalization_status", nullable = false, length = 32)

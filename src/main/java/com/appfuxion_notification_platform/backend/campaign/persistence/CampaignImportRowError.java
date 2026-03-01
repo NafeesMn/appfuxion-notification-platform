@@ -2,6 +2,9 @@ package com.appfuxion_notification_platform.backend.campaign.persistence;
 
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import com.appfuxion_notification_platform.backend.persistence.common.TenantScopedEntity;
 
 import jakarta.persistence.Column;
@@ -32,6 +35,7 @@ public class CampaignImportRowError extends TenantScopedEntity {
     private String errorMessage;
 
     @Column(name = "masked_row_snapshot", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String maskedRowSnapshot;
 
 }

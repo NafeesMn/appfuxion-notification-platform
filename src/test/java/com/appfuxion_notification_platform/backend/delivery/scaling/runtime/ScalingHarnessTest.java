@@ -32,7 +32,7 @@ import com.appfuxion_notification_platform.backend.delivery.scaling.domain.Worke
 import com.appfuxion_notification_platform.backend.domain.shared.NotificationChannel;
 
 @EnabledIfSystemProperty(named = "run.phase10.benchmark", matches = "true")
-class Phase10ScalingHarnessTest {
+class ScalingHarnessTest {
 
     @Test
     void benchmark_shouldShowHigherThroughputWithFourWorkersThanOneWorker() throws Exception {

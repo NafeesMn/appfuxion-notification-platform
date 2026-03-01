@@ -3,6 +3,9 @@ package com.appfuxion_notification_platform.backend.outbox.persistence;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import com.appfuxion_notification_platform.backend.outbox.domain.OutboxEventStatus;
 import com.appfuxion_notification_platform.backend.persistence.common.TenantScopedEntity;
 
@@ -33,6 +36,7 @@ public class OutboxEvent extends TenantScopedEntity {
     private String eventType;
 
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String payload;
 
     @Enumerated(EnumType.STRING)

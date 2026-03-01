@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.appfuxion_notification_platform.backend.api.tenant.TenantContextHolder;
 
@@ -91,6 +92,13 @@ public class GlobalApiExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgument(
+            IllegalArgumentException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
     @ExceptionHandler(FeatureNotImplementedException.class)
     public ResponseEntity<ApiErrorResponse> handleNotImplemented(
             FeatureNotImplementedException ex,
@@ -107,6 +115,13 @@ public class GlobalApiExceptionHandler {
                 ? ex.getBody().getDetail()
                 : ex.getMessage();
         return build(status, message, request, List.of());
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoResourceFound(
+            NoResourceFoundException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(Exception.class)

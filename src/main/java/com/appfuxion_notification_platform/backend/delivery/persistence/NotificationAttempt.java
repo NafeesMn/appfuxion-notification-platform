@@ -3,6 +3,9 @@ package com.appfuxion_notification_platform.backend.delivery.persistence;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import com.appfuxion_notification_platform.backend.delivery.domain.NotificationAttemptOutcome;
 import com.appfuxion_notification_platform.backend.persistence.common.TenantScopedEntity;
 
@@ -55,9 +58,11 @@ public class NotificationAttempt extends TenantScopedEntity {
     private Integer latencyMs;
 
     @Column(name = "request_metadata", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String requestMetadata;
 
     @Column(name = "response_metadata", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String responseMetadata;
 
     @Column(name = "started_at", nullable = false)

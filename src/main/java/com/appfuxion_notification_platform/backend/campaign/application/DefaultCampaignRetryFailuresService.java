@@ -15,6 +15,7 @@ import com.appfuxion_notification_platform.backend.campaign.domain.CampaignStatu
 import com.appfuxion_notification_platform.backend.campaign.persistence.Campaign;
 import com.appfuxion_notification_platform.backend.campaign.persistence.CampaignRepository;
 import com.appfuxion_notification_platform.backend.delivery.domain.NotificationJobStatus;
+import com.appfuxion_notification_platform.backend.delivery.persistence.NotificationAttemptRepository;
 import com.appfuxion_notification_platform.backend.delivery.persistence.NotificationJob;
 import com.appfuxion_notification_platform.backend.delivery.persistence.NotificationJobRepository;
 import com.appfuxion_notification_platform.backend.outbox.domain.OutboxEventStatus;
@@ -28,20 +29,24 @@ import com.appfuxion_notification_platform.backend.tenant.persistence.TenantRepo
 public class DefaultCampaignRetryFailuresService implements CampaignRetryFailuresService {
 
     private static final String RETRY_STATUS = "RETRY_ACCEPTED";
+    private static final int MANUAL_RETRY_ATTEMPT_BUDGET = 3;
 
     private final TenantRepository tenantRepository;
     private final CampaignRepository campaignRepository;
     private final NotificationJobRepository notificationJobRepository;
+    private final NotificationAttemptRepository notificationAttemptRepository;
     private final OutboxEventRepository outboxEventRepository;
 
     public DefaultCampaignRetryFailuresService(
             TenantRepository tenantRepository,
             CampaignRepository campaignRepository,
             NotificationJobRepository notificationJobRepository,
+            NotificationAttemptRepository notificationAttemptRepository,
             OutboxEventRepository outboxEventRepository) {
         this.tenantRepository = Objects.requireNonNull(tenantRepository);
         this.campaignRepository = Objects.requireNonNull(campaignRepository);
         this.notificationJobRepository = Objects.requireNonNull(notificationJobRepository);
+        this.notificationAttemptRepository = Objects.requireNonNull(notificationAttemptRepository);
         this.outboxEventRepository = Objects.requireNonNull(outboxEventRepository);
     }
 
@@ -74,8 +79,12 @@ public class DefaultCampaignRetryFailuresService implements CampaignRetryFailure
         }
 
         for (NotificationJob failedJob : failedJobs) {
+            int latestAttemptNumber = resolveLatestAttemptNumber(failedJob);
             failedJob.setStatus(NotificationJobStatus.RETRY_SCHEDULED);
-            failedJob.setAttemptCount(0);
+            failedJob.setAttemptCount(latestAttemptNumber);
+            failedJob.setMaxRetries(Math.max(
+                    failedJob.getMaxRetries(),
+                    latestAttemptNumber + MANUAL_RETRY_ATTEMPT_BUDGET));
             failedJob.setNextAttemptAt(requestedAt);
             failedJob.setDeferredUntil(null);
             failedJob.setCompletedAt(null);
@@ -85,6 +94,14 @@ public class DefaultCampaignRetryFailuresService implements CampaignRetryFailure
         }
         notificationJobRepository.saveAll(failedJobs);
         return failedJobs.size();
+    }
+
+    private int resolveLatestAttemptNumber(NotificationJob failedJob) {
+        return Math.max(
+                failedJob.getAttemptCount(),
+                notificationAttemptRepository.findTopByNotificationJobIdOrderByAttemptNumberDesc(failedJob.getId())
+                        .map(attempt -> attempt.getAttemptNumber())
+                        .orElse(0));
     }
 
     private OutboxEvent buildRetryRequestedOutbox(Campaign campaign, Instant requestedAt, int requeuedCount) {
