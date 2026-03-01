@@ -20,7 +20,7 @@ import lombok.Setter;
 @Table(name = "notification_attempts")
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class NotificationAttempt extends TenantScopedEntity {
 
     @Column(name = "campaign_id", nullable = false)
