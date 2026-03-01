@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface CampaignImportRowErrorRepository extends JpaRepository<CampaignImportRowError, UUID> {
 
     List<CampaignImportRowError> findByCampaignIdAndTenantIdOrderByRowNumberAsc(UUID campaignId, UUID tenantId);
+
+    long countByCampaignIdAndTenantId(UUID campaignId, UUID tenantId);
 }

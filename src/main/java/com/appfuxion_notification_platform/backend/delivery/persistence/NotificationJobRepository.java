@@ -41,4 +41,13 @@ public interface NotificationJobRepository extends JpaRepository<NotificationJob
             Pageable pageable);
 
     List<NotificationJob> findByCampaignIdAndTenantIdAndStatus(UUID campaignId, UUID tenantId, NotificationJobStatus status);
+
+    long countByCampaignIdAndTenantId(UUID campaignId, UUID tenantId);
+
+    long countByCampaignIdAndTenantIdAndStatus(UUID campaignId, UUID tenantId, NotificationJobStatus status);
+
+    long countByCampaignIdAndTenantIdAndStatusIn(
+            UUID campaignId,
+            UUID tenantId,
+            Collection<NotificationJobStatus> statuses);
 }
