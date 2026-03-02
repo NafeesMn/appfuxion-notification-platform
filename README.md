@@ -3,7 +3,7 @@
 ## Overview
 
 Backend take-home assessment project for a multi-tenant notification and campaign platform supporting simulated Email/SMS/Push delivery with asynchronous processing.
-You may view the simple frontend app deployed [Here](https://notification-platform-frontend.vercel.app/campaigns)
+You may view the simple frontend app deployed [Here](https://notification-platform-frontend.vercel.app)
 
 ## Assessment Scope (Planned)
 
