@@ -1,7 +1,7 @@
 # Notification Platform Backend
 
 ## View Demo
-(Demo)[https://notification-platform-frontend.vercel.app]
+[Demo](https://notification-platform-frontend.vercel.app)
 
 ## Prerequisites
 
