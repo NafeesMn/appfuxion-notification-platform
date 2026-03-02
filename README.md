@@ -3,6 +3,7 @@
 ## Overview
 
 Backend take-home assessment project for a multi-tenant notification and campaign platform supporting simulated Email/SMS/Push delivery with asynchronous processing.
+You may view the simple frontend app deployed [Here](https://notification-platform-frontend.vercel.app/campaigns)
 
 ## Assessment Scope (Planned)
 
@@ -20,14 +21,14 @@ Core requirements to implement in later phases:
 - Tenant isolation
 - Structured logging with correlation IDs and PII masking
 
-## Chosen Architecture (Phase 0)
+## Chosen Architecture
 
 - Java Spring Boot (modular monolith)
 - PostgreSQL as system of record
 - Flyway migrations
 - Transactional outbox pattern for async workflow signaling
 - DB-backed worker processing (initial)
-- Phase 4 scaling: partitioned DB-backed workers with shard ownership
+- Scaling: partitioned DB-backed workers with shard ownership
 
 ## Repository Status
 
@@ -35,19 +36,6 @@ Core requirements to implement in later phases:
 - Campaign create/query/retry APIs implemented
 - Scaling runtime (partitioned worker coordination) implemented
 - Planning artifacts maintained under `docs/assessment/`
-
-## Planning Documents
-
-- `ENGINEERING_NOTES.md`
-- `docs/assessment/PHASE_PLAN.md`
-- `docs/assessment/ARCHITECTURE_DECISIONS.md`
-- `docs/assessment/ASSUMPTIONS.md`
-- `docs/assessment/CONCEPTUAL_DOMAIN_MODEL.md`
-- `docs/assessment/PROCESS_FLOW.md`
-- `docs/assessment/ARCHITECTURE_DIAGRAM.md`
-- `docs/assessment/PHASE10_SCALING.md`
-- `docs/assessment/PART5_SYSTEM_DESIGN.md`
-- `docs/assessment/FINAL_HARDENING_NOTES.md`
 
 ## Planned Architecture (High Level)
 
@@ -63,7 +51,7 @@ The backend will run as a modular monolith with internal bounded contexts:
 
 State will be stored in PostgreSQL with durable notification jobs, attempts, and outbox events. Workers will poll due work and apply rules, throttling, retries, and idempotency before calling provider simulators.
 
-## API Endpoints (Planned)
+## API Endpoints
 
 - `POST /campaigns`
 - `GET /campaigns`
@@ -72,16 +60,13 @@ State will be stored in PostgreSQL with durable notification jobs, attempts, and
 
 Detailed request/response contracts will be added in implementation phases.
 
-## Setup (Placeholder - To Be Completed in Later Phase)
-
 ### Prerequisites
 
-- Java (version TBD, align with project `pom.xml`)
+- Java
 - Maven Wrapper (`./mvnw` / `mvnw.cmd`)
 - PostgreSQL (local or container)
-- Docker (for Testcontainers integration tests, later)
 
-### Environment Variables (Placeholder)
+### Environment Variables
 
 Planned examples (final names may change):
 
@@ -95,27 +80,6 @@ Planned examples (final names may change):
 - `APP_SCALING_WORKER_ID`
 - `APP_SCALING_ACTIVE_WORKERS`
 - `APP_SCALING_TOTAL_PARTITIONS`
-
-### Run Instructions (Placeholder)
-
-Planned commands (to be finalized after implementation):
-
-```powershell
-.\mvnw.cmd spring-boot:run
-```
-
-Enable Phase 10 worker loop (example):
-
-```powershell
-$env:APP_SCALING_WORKER_ENABLED="true"
-$env:APP_SCALING_WORKER_ID="worker-a"
-$env:APP_SCALING_ACTIVE_WORKERS="4"
-.\mvnw.cmd spring-boot:run
-```
-
-### Database Migrations (Placeholder)
-
-Flyway migrations will be added in Phase 1.
 
 ## Testing
 
@@ -131,15 +95,11 @@ Run all tests:
 .\mvnw.cmd test
 ```
 
-Run Phase 10 scaling benchmark harness:
+Run scaling benchmark harness:
 
 ```powershell
 .\scripts\phase10\run-scaling-benchmark.ps1
 ```
-
-## Roadmap
-
-See `docs/assessment/PHASE_PLAN.md` for the Phase 0-11 backend roadmap and acceptance milestones.
 
 ## Notes
 

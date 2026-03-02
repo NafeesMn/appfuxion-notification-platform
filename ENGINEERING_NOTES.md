@@ -4,14 +4,9 @@
 
 This repository is being prepared for the Appfuxion take-home assessment: a multi-tenant notification and campaign platform (Email/SMS/Push simulation) with asynchronous processing, retries, idempotency, rate limiting, CSV ingestion, structured logging, and tenant isolation.
 
-This document started as the Phase 0 deliverable and was extended through Phase 11 as implementation progressed. The final Part 5 material is documented in:
+## Scope
 
-- `docs/assessment/PART5_SYSTEM_DESIGN.md`
-- `docs/assessment/FINAL_HARDENING_NOTES.md`
-
-## Phase 0 Scope (Completed in This Document Set)
-
-In scope for Phase 0:
+In scope:
 
 - Lock architecture decisions and tradeoffs.
 - Define bounded contexts and system boundaries.
@@ -21,7 +16,7 @@ In scope for Phase 0:
 - Define implementation roadmap for Parts 3, 4, and 5.
 - Prepare README and architecture diagrams.
 
-Out of scope for Phase 0:
+Out of scope:
 
 - Spring controllers/services/repositories.
 - Flyway SQL migrations.
@@ -35,9 +30,7 @@ Out of scope for Phase 0:
 - Database: PostgreSQL
 - Migrations: Flyway
 - Initial async strategy: DB-backed worker processing + transactional outbox
-- Phase 4 scaling strategy: Partitioned DB-backed worker processing with partition/shard ownership
-
-## Architecture Summary (Opinionated Baseline)
+- Scaling strategy: Partitioned DB-backed worker processing with partition/shard ownership
 
 ### Deployment Shape
 
@@ -116,7 +109,7 @@ Responsibilities:
 - Structured logging with `correlationId`, `tenantId`, `campaignId`, `notificationJobId`, `attempt`
 - PII masking in logs
 - Metrics hooks (queue depth, throughput, retries, rule outcomes, rate-limit waits)
-- Worker lease/partition telemetry (Phase 4)
+- Worker lease/partition telemetry
 
 ## Key Architecture Decisions and Tradeoffs
 
@@ -138,7 +131,7 @@ Tradeoff:
 - Higher DB load and polling overhead than a broker-first design.
 - Requires careful indexes and fetch batching to avoid contention.
 
-### Decision 2: Streaming CSV Ingestion in Request Path (Phase 1/Part 3)
+### Decision 2: Streaming CSV Ingestion in Request Path
 
 Chosen:
 
@@ -161,7 +154,7 @@ Tradeoff:
 Chosen:
 
 - Idempotency key: `hash(tenantId + campaignId + recipientId + channel + normalizedMessageTemplate)`.
-- Enforce uniqueness in persisted delivery identity (Phase 1 schema).
+- Enforce uniqueness in persisted delivery identity
 
 Why:
 
@@ -205,7 +198,7 @@ Tradeoff:
 
 - Noisy tenants can consume capacity. Fairness controls are deferred (but documented for production).
 
-### Decision 6: Phase 4 Scaling via Partitioned DB Workers
+### Decision 6: Scaling via Partitioned DB Workers
 
 Chosen:
 
@@ -245,7 +238,7 @@ Tradeoff:
 - Add `DELAYED` and `SKIPPED`.
 - Rationale: quiet-hours and suppression are neither success nor retryable failure.
 
-### A5. Phase 4 Scaling Strategy
+### A5. Scaling Strategy
 
 - Implement partitioned DB-backed worker processing with partition/shard ownership.
 - Rationale: lower implementation risk than broker migration while still demonstrating throughput controls.
@@ -257,7 +250,7 @@ Tradeoff:
 1. Receive multipart request (campaign metadata + CSV).
 2. Resolve tenant context and generate `correlationId`.
 3. Validate metadata (channel, template/message, campaign type).
-4. Create campaign record in `ACCEPTED` or `INGESTING` state (final naming decided in schema phase).
+4. Create campaign record in `ACCEPTED` or `INGESTING` state
 5. Stream CSV rows:
    - parse row
    - normalize recipient fields
@@ -265,7 +258,7 @@ Tradeoff:
    - validate required columns per channel
    - persist recipient row / import row
    - accumulate import counters
-6. Create notification jobs (either inline during ingestion or as a post-ingestion expansion step within same bounded workflow; Phase 1 schema will support both).
+6. Create notification jobs (either inline during ingestion or as a post-ingestion expansion step within same bounded workflow).
 7. Insert outbox event (e.g., `CampaignDispatchRequested`) transactionally.
 8. Return `202 Accepted` with campaign id and initial summary.
 
@@ -314,7 +307,7 @@ Tradeoff:
 - Backoff policy applied with max retry count.
 - Jobs exceeding max retries become `FAILED`; `retry-failures` endpoint can reschedule.
 
-### Worker Lease/Partition Ownership Loss (Phase 4)
+### Worker Lease/Partition Ownership Loss
 
 - Claimed partitions expire via lease timeout.
 - Another worker can reclaim and resume.
@@ -372,7 +365,7 @@ Structured logs should consistently include:
 - `channel`
 - `status`
 - `attemptNumber`
-- `workerId` / `partitionId` (Phase 4)
+- `workerId` / `partitionId`
 
 PII masking policy (minimum):
 
@@ -380,7 +373,7 @@ PII masking policy (minimum):
 - Phone number: retain country code/last 2-4 digits only
 - Message body/template variables: never log raw body; log template id/version and size/hash
 
-## Testing Strategy (Planned, Not Implemented in Phase 0)
+## Testing Strategy
 
 - Unit tests:
   - rule engine decisions (suppression, quiet-hours, transactional bypass)
@@ -422,13 +415,3 @@ Planned approach for assessment submission:
 - Use AI assistance selectively for boilerplate generation suggestions (not blind copy/paste).
 - Manually validate all design decisions, assumptions, and implementation behavior.
 - Clearly disclose AI usage in this file and ensure final code reflects deliberate engineering choices.
-
-## Recommended Phase 1 Starting Point
-
-Start Phase 1 with schema and domain model implementation scaffolding (not business logic):   
-
-1. Define core enums/state machines and aggregate boundaries in Java (domain-focused packages).
-2. Design Flyway baseline schema for campaign, recipient, notification job, attempt, outbox, suppression, tenant, and indexes.
-3. Add repository/query interfaces aligned to due-work polling and tenant-scoped reads.
-
-This ordering minimizes rework and makes Part 3/4 behaviors implementable without revisiting architecture decisions.
